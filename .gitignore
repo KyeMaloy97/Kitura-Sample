@@ -1,6 +1,4 @@
-.build
-.vagrant
-Packages
-*.pkg
-*.xcodeproj
-Package.resolved
+.build/*
+.build-ubuntu/*
+*.xcodeproj/*
+.DS_Store
