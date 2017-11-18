@@ -207,7 +207,7 @@ class KituraSampleTests: KituraTest {
                 }
 
                 let matches = regularExpression.matches(in: body, options: [],
-                    range: NSMakeRange(0, body.characters.count))
+                    range: NSMakeRange(0, body.count))
 
                 guard let match = matches.first else {
                     XCTFail("no match of title tag in body")
