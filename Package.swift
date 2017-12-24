@@ -35,10 +35,10 @@ let package = Package(
     ],
     targets: [
       .target(name: "Kitura-Sample",
-              dependencies: ["KituraSampleRouter", "Kitura"]),
+              dependencies: ["KituraSampleRouter", "Kitura", "HeliumLogger"]),
       .target(name: "KituraSampleRouter",
-              dependencies: ["Kitura", "HeliumLogger", "KituraStencil", "KituraMarkdown"]),
+              dependencies: ["Kitura", "KituraStencil", "KituraMarkdown"]),
       .testTarget(name: "KituraSampleRouterTests",
-              dependencies: ["KituraSampleRouter"]),
+                  dependencies: ["KituraSampleRouter", "HeliumLogger"]),
     ]
 )
