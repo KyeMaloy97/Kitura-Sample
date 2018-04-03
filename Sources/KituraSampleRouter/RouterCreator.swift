@@ -23,6 +23,8 @@ import KituraMarkdown
 import KituraStencil // required for using StencilTemplateEngine
 import Stencil // required for adding a Stencil namespace to StencilTemplateEngine
 import KituraWebSocket
+import SwiftJWT
+import HTMLEntities
 
 import LoggerAPI
 import HeliumLogger
@@ -62,6 +64,12 @@ extension SampleError: CustomStringConvertible {
     }
 }
 
+public let users: [User] = [
+    User(username: "admin", password: "password", admin: true),
+    User(username: "user1", password: "defaultPassword", admin: false),
+    User(username: "expired", password: "expired", admin: false)
+]
+
 public struct RouterCreator {
     public static func create() -> Router {
         let router = Router()
@@ -88,7 +96,8 @@ public struct RouterCreator {
 
         router.all("/static", middleware: StaticFileServer())
         router.all("/chat", middleware: StaticFileServer(path: "./chat"))
-
+        router.all("/jwt", middleware: StaticFileServer(path: "/jwt"))
+        
         router.get("/hello") { _, response, next in
             response.headers["Content-Type"] = "text/plain; charset=utf-8"
             let fName = name ?? "World"
@@ -100,6 +109,116 @@ public struct RouterCreator {
             response.headers["Content-Type"] = "text/plain; charset=utf-8"
             name = try request.readString()
             try response.send("Got a POST request").end()
+        }
+        
+        router.get("/login") { request, response, next in
+            response.headers["Content-Type"] = "text/html; charset=utf-8"
+            try response.render("index", context: [:])
+            next()
+        }
+        
+        router.post("/submit") { request, response, next in
+            response.headers["Content-Type"] = "text/html; charset=utf-8"
+            guard let data = try request.readString() else {
+                try response.send("Unable to parse input from form.").end()
+                next()
+                return
+            }
+            let stringArr = data.components(separatedBy: "&")
+            var attemptedUser = User(username: String(describing: stringArr[0].split(separator: "=").last!), password: String(describing: stringArr[1].split(separator: "=").last!), admin: false)
+            
+            for user in users {
+                if attemptedUser.username == user.username {
+                    if attemptedUser.password == user.password {
+                        let authenticatedUser = user
+                        
+                        // Generate the JWT as they have been authorised as a user of the site.
+                        let myKeyPath = URL.init(fileURLWithPath: getAbsolutePath(relativePath: "/jwt/jwtRS256.key")!)
+                        var key: Data = try Data(contentsOf: myKeyPath, options: .alwaysMapped)
+                        
+                        // Create time objects for making the Issued At and Expires claim. Also makes a dud for showing
+                        // what happens when you login with an expired token.
+                        let time = NSDate().timeIntervalSince1970
+                        let expireDate = NSDate().timeIntervalSince1970.advanced(by: 31557600.00) //Adds 1 year in seconds.
+                        let dudExpire = NSDate().timeIntervalSince1970.nextDown
+                        
+                        // Create the JWT with a Header and a Claims object
+                        var headers = Header([.typ:"JWT", .alg:"rsa256",])
+                        var claims = Claims([.iss:"IBM", .name: authenticatedUser.username, .iat: time, .exp: expireDate])
+                        // Make the token have an expired expiration date.
+                        if authenticatedUser.username == "expired" {
+                            claims[.exp] = dudExpire
+                        }
+                        var jwt = JWT(header: headers, claims: claims)
+                        
+                        
+                        // Sign the JWT.
+                        guard let signedJWT = try jwt.sign(using: .rs256(key, .privateKey)) else {
+                            try response.send("Error creating/signing JWT.").end()
+                            return
+                        }
+                        
+                        let decoded = try! JWT.decode(signedJWT)
+                        let printThis = String(describing: decoded!)
+                        
+                        response.headers["Set-Cookie"] = "jwt=\(signedJWT)"
+                        try response.render("loggedin", context: ["decodedJWT": printThis, "token": signedJWT])
+                        return
+                    } else {
+                        try response.render("index", context: ["reason":"Incorrect Credentials. Please try again."])
+                    }
+                }
+            }
+            
+        }
+        
+        router.get("/secret") { request, response, next in
+            let cookieFull = request.headers["Cookie"]
+            let cookieArray = cookieFull?.split(separator: ";")
+            var cookie = String()
+            if cookieArray != nil {
+                for item in cookieArray! {
+                    if item.contains("jwt") {
+                        let newArray = item.split(separator: "=")
+                        cookie = String(describing: newArray[1])
+                    }
+                }
+            }
+            response.headers["Content-Type"] = "text/html; charset=utf-8"
+            
+            let decoded = try JWT.decode(cookie)
+            let claims = decoded?.validateClaims(issuer: "IBM")
+            let claimsString = String(describing: claims!)
+            print("ClaimsString: \(claimsString)")
+            if claims != nil {
+                switch claims! {
+                    case .success:
+                        try response.render("success", context: ["name": decoded?.claims.asDictionary["name"]])
+                    default:
+                        try response.render("failure", context: ["claims": claimsString])
+                }
+            } else {
+                try response.render("failure", context: ["claims": claimsString])
+
+            }
+            
+        }
+        
+        
+        router.get("/print_jwt") { request, response, next in
+
+            response.headers["Content-Type"] = "text/plain; charset=utf-8"
+            let myKeyPath = URL.init(fileURLWithPath: getAbsolutePath(relativePath: "/jwt/jwtRS256.key")!)
+            var key: Data = try Data(contentsOf: myKeyPath, options: .alwaysMapped)
+            var jwt = JWT(header: Header([.typ:"JWT", .alg:"rsa256", .cty:"JWE"]), claims: Claims([.name:"Kitura", .jti:"sbdabd762AA", .iss:"IBM", .aud:"anyone", .sub:"KituraSample", .iat:"03/15/2018", .exp:"03/15/2019", .nbf:"03/14/2018"]))
+            guard let signedJWT = try jwt.sign(using: .rs256(key, .privateKey)) else {
+                try response.send("Error creating/signing JWT.").end()
+                return
+            }
+            let decoded = try JWT.decode(signedJWT)
+            print(decoded!)
+
+            try response.send(signedJWT).end()
         }
 
         // This route accepts PUT requests
@@ -273,6 +392,28 @@ public struct RouterCreator {
                 }
             }
             next()
+        }
+        
+        func getAbsolutePath(relativePath: String) -> String? {
+            let fileManager = FileManager.default
+            let currentPath = fileManager.currentDirectoryPath
+            var filePath = currentPath + "/" + relativePath
+            if fileManager.fileExists(atPath: filePath) {
+                return filePath
+            } else {
+                let initialPath = #file
+                let components = initialPath.characters.split(separator: "/").map(String.init)
+                var searchDepth = 1
+                while components.count >= searchDepth {
+                    let currentDir = components[0..<components.count - searchDepth]
+                    filePath = "/" + currentDir.joined(separator: "/") + "/" + relativePath
+                    if fileManager.fileExists(atPath: filePath) {
+                        return filePath
+                    }
+                    searchDepth += 1
+                }
+                return nil
+            }
         }
 
         return router

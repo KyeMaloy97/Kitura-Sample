@@ -32,13 +32,15 @@ let package = Package(
         .package(url: "https://github.com/IBM-Swift/HeliumLogger.git", .upToNextMinor(from: "1.7.0")),
         .package(url: "https://github.com/IBM-Swift/Kitura-StencilTemplateEngine.git", .upToNextMinor(from: "1.8.0")),
         .package(url: "https://github.com/IBM-Swift/Kitura-Markdown", .upToNextMinor(from: "0.9.0")),
-        .package(url: "https://github.com/IBM-Swift/Kitura-WebSocket.git", .upToNextMinor(from: "1.0.1"))
+        .package(url: "https://github.com/IBM-Swift/Kitura-WebSocket.git", .upToNextMinor(from: "1.0.1")),
+        .package(url: "https://github.com/IBM-Swift/Swift-JWT.git", from: "0.0.0"),
+        .package(url: "https://github.com/IBM-Swift/swift-html-entities", .upToNextMajor(from: "3.0.0"))
     ],
     targets: [
       .target(name: "Kitura-Sample",
               dependencies: ["KituraSampleRouter", "Kitura"]),
       .target(name: "KituraSampleRouter",
-              dependencies: ["Kitura", "HeliumLogger", "KituraStencil", "KituraMarkdown", "Kitura-WebSocket"]),
+              dependencies: ["Kitura", "HeliumLogger", "KituraStencil", "KituraMarkdown", "Kitura-WebSocket", "SwiftJWT", "HTMLEntities"]),
       .testTarget(name: "KituraSampleRouterTests",
               dependencies: ["KituraSampleRouter"]),
     ]

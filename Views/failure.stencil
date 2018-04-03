@@ -1,0 +1,10 @@
+<!DOCTYPE HTML>
+
+<html>
+  <head>
+<title>Failure!</title>
+  </head>
+  <body>
+    <p>You are not authenticated... Sorry! Reason: <strong>{{ claims }}</strong>.</p>
+  </body>
+</html>

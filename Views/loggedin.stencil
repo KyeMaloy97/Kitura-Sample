@@ -1,0 +1,20 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>Hello!</title>
+  </head>
+  <body>
+      <p>
+          <strong>Here is your JSON Web Token:<br/></strong> {{ token }}
+      </p>
+      <p>
+          <strong>And here it is as JSON:<br/></strong> {{ decodedJWT }}
+      </p>
+      <p>
+          Visit <a href="https://jwt.io/">JWT.io</a> to verify your token. If you used a public/private key pair, you'll need to paste in the public key into the corresponding box.
+      </p>
+      <a href="/secret">Logged In Members only</a>
+      
+      <p>To test this out, delete the JWT token from your local storage and then try accessing the link above. It will fail as the token needs to be decoded by the route before the page is rendered and have its claims verified. This inlcudes checking the issuer and that the expiration date has not passed.</p>
+  </body>
+</html>
