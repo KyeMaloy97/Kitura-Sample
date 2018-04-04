@@ -58,6 +58,16 @@ It features the following:
 
 This demo sets up a local chat server using [Kitura's WebSocket](https://github.com/IBM-Swift/Kitura-WebSocket/) library, and the UI mimicks a chat room. Two separate browser windows pointed to the `/chat` route can be used to represent two people in the chat room if the project is running on localhost. It can also be deployed to the [IBM Cloud](https://bluemix.net) and then accessed via a Cloud Foundry App.
 
+### Swift JSON Web Tokens
+
+> Route: [localhost:8080/login](localhost:8080/login)
+
+A simple demo showing how a login page can generate a JSON Web Token for authentication of a user. After a successful login a token is generated and saved in the session storage of the browser. This can be viewed under Storage in the developer settings.
+
+After token generation, the JWT is displayed in the browser window as both the base 64 encoded String and as a printed Swift JWT object. A link on this page fails is a user isn't logged in or if the JWT is expired, tampered with or is otherwise invalid.
+
+See http://jwt.io for more information. Further reading on the JWT Web Standard (RFC 7519) can be found [here](https://tools.ietf.org/html/rfc7519).
+
 ### Stencil Templating Engine
 > Route: [localhost:8080/articles](localhost:8080/articles)
 
